@@ -10,9 +10,8 @@ app = Flask(__name__)
 CORS(app)
 
 client = Groq(
-    api_key=os.getenv("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")
+    api_key=os.getenv("GROQ_API_KEY")
 )
-
 @app.route("/")
 def home():
     return render_template("index.html")
