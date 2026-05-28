@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI ChatBot</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+        }
+
+        .chat-container {
+            width: 420px;
+            height: 600px;
+            background: #111;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(255,255,255,0.1);
+        }
+
+        .header {
+            padding: 15px;
+            background: #1f1f1f;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-box {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .msg {
+            padding: 10px 14px;
+            margin: 6px;
+            border-radius: 15px;
+            max-width: 75%;
+            display: inline-block;
+            clear: both;
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+
+        /* 🌸 USER (PASTEL PINK) */
+        .user {
+            background: #ffd6e0;
+            color: #000;
+            float: right;
+        }
+
+        /* 🌿 BOT (PASTEL BLUE) */
+        .bot {
+            background: #d6f5ff;
+            color: #000;
+            float: left;
+        }
+
+        .input-box {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #333;
+        }
+
+        input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            outline: none;
+            background: #222;
+            color: white;
+        }
+
+        input::placeholder {
+            color: #aaa;
+        }
+
+        button {
+            margin-left: 5px;
+            padding: 10px;
+            border: none;
+            background: #b5ead7;
+            color: #000;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #a0e7e5;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="chat-container">
+
+    <div class="header">
+        <span>AI ChatBot</span>
+        <button onclick="startVoice()">🎤</button>
+    </div>
+
+    <div id="chatBox" class="chat-box"></div>
+
+    <div class="input-box">
+        <input id="userInput" placeholder="Type or speak...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+</div>
+
+<script>
+
+let chatBox = document.getElementById("chatBox");
+
+// ---------------- LOAD CHAT HISTORY ----------------
+window.onload = function () {
+    let saved = localStorage.getItem("chatHistory");
+    if (saved) {
+        chatBox.innerHTML = saved;
+    }
+};
+
+// ---------------- SAVE CHAT ----------------
+function saveChat() {
+    localStorage.setItem("chatHistory", chatBox.innerHTML);
+}
+
+// ---------------- ADD MESSAGE ----------------
+function addMessage(text, type) {
+    let msg = document.createElement("div");
+    msg.classList.add("msg", type);
+    msg.innerText = text;
+
+    chatBox.appendChild(msg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    saveChat();
+}
+
+// ---------------- VOICE ASSISTANT 🎤 ----------------
+function startVoice() {
+
+    let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+    recognition.lang = "en-US";
+
+    recognition.onresult = function(event) {
+        document.getElementById("userInput").value =
+            event.results[0][0].transcript;
+    };
+
+    recognition.start();
+}
+
+// ---------------- TYPING EFFECT ----------------
+function typeMessage(element, text) {
+    let i = 0;
+    element.innerHTML = "";
+
+    let interval = setInterval(() => {
+        if (i < text.length) {
+            element.innerHTML += text.charAt(i);
+            i++;
+        } else {
+            clearInterval(interval);
+            saveChat();
+        }
+    }, 20);
+}
+
+// ---------------- SEND MESSAGE ----------------
+async function sendMessage() {
+
+    let input = document.getElementById("userInput");
+    let message = input.value;
+
+    if (message.trim() === "") return;
+
+    // show user message
+    addMessage(message, "user");
+    input.value = "";
+
+    // typing placeholder
+    let typingMsg = document.createElement("div");
+    typingMsg.classList.add("msg", "bot");
+    typingMsg.innerText = "Typing...";
+    chatBox.appendChild(typingMsg);
+
+    saveChat();
+
+    // send to Flask backend
+    const response = await fetch("http://127.0.0.1:5000/chat", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            message: message
+        })
+    });
+
+    const data = await response.json();
+
+    // typing animation response
+    typeMessage(typingMsg, data.reply);
+}
+
+</script>
+
+</body>
+</html>
